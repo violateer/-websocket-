@@ -19,6 +19,11 @@ io.on('connection', (socket) => {
     // 广播消息(除了自己其他人都能收到)
     socket.broadcast.emit('message', '有人正在偷听');
     
+    // 监听客户端消息
+    socket.on('chatMessage', (msg) => {
+        io.emit('message', msg);
+    });
+    
     // 监听客户端是否断开连接
     socket.on('disconnect', () => {
         // 所有人能收到消息(包括自己)
