@@ -3,7 +3,7 @@ const path = require('path');
 const socketio = require('socket.io');
 const http = require('http');
 const formatMessage = require('./utils/message');
-const { userJoin, getCurrentUser } = require('./utils/users');
+const { userJoin, getCurrentUser, userLeave, getRoomUsers } = require('./utils/users');
 
 // 初始化
 const app = express();
@@ -25,17 +25,31 @@ io.on('connection', (socket) => {
         socket.emit('message', formatMessage(botName, '欢迎加入聊天室'));
         // 广播消息(除了自己其他人都能收到)
         socket.broadcast.to(user.room).emit('message', formatMessage(botName, `欢迎${user.username}进入房间`));
+        // 发送用户和房间信息给用户端
+        io.to(user.room).emit('roomUsers', {
+            room: user.room,
+            users: getRoomUsers(user.room)
+        });
     });
     
     // 监听客户端消息
     socket.on('chatMessage', (msg) => {
-        io.emit('message', msg);
+        const user = getCurrentUser(socket.id);
+        io.to(user.room).emit('message', formatMessage(user.username, msg));
     });
     
     // 监听客户端是否断开连接
     socket.on('disconnect', () => {
-        // 所有人能收到消息(包括自己)
-        io.emit('message', '某某某已下线');
+        const user = userLeave(socket.id);
+        if (user) {
+            // 所有人能收到消息(包括自己)
+            io.to(user.room).emit('message', formatMessage(botName, `${user.username}已下线`));
+            // 发送用户和房间信息给用户端
+            io.to(user.room).emit('roomUsers', {
+                room: user.room,
+                users: getRoomUsers(user.room)
+            });
+        }
     });
 });
 

@@ -12,6 +12,12 @@ const { username, room } = Qs.parse(location.search, {
 // 加入房间
 socket.emit('joinRoom', { username, room });
 
+// 获取从服务器发送的room和users
+socket.on('roomUsers', ({ room, users }) => {
+    outputRoomName(room);
+    outputUsers(users);
+});
+
 // 获得从服务器发送的消息
 socket.on('message', (msg) => {
     // 发送消息
@@ -44,4 +50,12 @@ function outputMessage (msg) {
                 </p>
             </div>`;
     chatMessages.appendChild(div);
+}
+
+function outputRoomName (room) {
+    roomName.innerHTML = room;
+}
+
+function outputUsers (users) {
+    userList.innerHTML = `${users.map(user => `<li>${user.username}</li>`).join('')}`;
 }
