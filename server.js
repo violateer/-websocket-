@@ -3,6 +3,7 @@ const path = require('path');
 const socketio = require('socket.io');
 const http = require('http');
 const formatMessage = require('./utils/message');
+const { userJoin, getCurrentUser } = require('./utils/users');
 
 // 初始化
 const app = express();
@@ -16,11 +17,15 @@ const botName = '聊天小助手';
 app.use(express.static(path.join(__dirname, 'public')));
 // 监听客户端是否触发连接
 io.on('connection', (socket) => {
-    // 一对一发送消息
-    socket.emit('message', formatMessage(botName, '欢迎加入聊天室'));
-    
-    // 广播消息(除了自己其他人都能收到)
-    socket.broadcast.emit('message', '有人正在偷听');
+    // 监听加入房间事件
+    socket.on('joinRoom', ({ username, room }) => {
+        const user = userJoin(socket.id, username, room);
+        socket.join(user.room);
+        // 一对一发送消息
+        socket.emit('message', formatMessage(botName, '欢迎加入聊天室'));
+        // 广播消息(除了自己其他人都能收到)
+        socket.broadcast.to(user.room).emit('message', formatMessage(botName, `欢迎${user.username}进入房间`));
+    });
     
     // 监听客户端消息
     socket.on('chatMessage', (msg) => {
